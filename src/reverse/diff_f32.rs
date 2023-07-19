@@ -1,5 +1,4 @@
-use std::ops::{Index, IndexMut};
-use super::tape::{Idx, Tape, CompNode, Diff};
+use super::tape::{Idx, Tape, CompNode, Diff, EmptyOp};
 use std::fmt;
 
 #[derive(Debug)]
@@ -13,23 +12,9 @@ pub enum ScalarOps {
     ReLU(Idx)
 }
 
-impl Index<Idx> for Tape<f32, ScalarOps> {
-    type Output = CompNode<f32, ScalarOps>;
-
-    fn index(&self, index: Idx) -> &Self::Output {
-        &self.vals[index]
-    }
-}
-
-impl IndexMut<Idx> for Tape<f32, ScalarOps> {
-    fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
-        &mut self.vals[index]
-    }
-}
-
-impl CompNode<f32, ScalarOps> {
-    pub fn new(data: f32) -> Self {
-        Self { data, grad: 0.0, idx: 0, children: ScalarOps::Empty }
+impl EmptyOp for ScalarOps {
+    fn empty_operator() -> Self {
+        ScalarOps::Empty
     }
 }
 

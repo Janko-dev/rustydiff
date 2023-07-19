@@ -2,42 +2,28 @@
 // use std::ops::{Index, IndexMut};
 
 
-use rustydiff::autodiff::{self, Diff, ScalarOps};
+use rustydiff::reverse::{Diff, ScalarOps, Tape};
+use rustydiff::forward::{F};
 
 
-// impl std::ops::Add for Idx {
-//     type Output = Idx;
-
-//     fn add(self, rhs: Self) -> Self::Output {
-//         let res = 
-        
-//     }
-// }
-
-// struct Graph<T> {
-//     nodes: Vec<NodeData<T>>,
-//     edges: Vec<EdgeData>
-// }
-
-// struct NodeData<T> {
-//     data: T,
-//     index: Idx
-// }
-
-// struct EdgeData {
-//     from: Idx,
-//     to: Idx
-// }
-
-fn main() {
-    let mut tp = autodiff::Tape::<f32, ScalarOps>::new();
-    let mut a = tp.create_node(5.0);
-    let b = tp.create_node(2.0);
-    let c = tp.create_node(2.0);
-    a = tp.add(a, b);
-    let y = tp.mul(c, a);
-    // (2 + 5) * 2 = 14
-    // 
+fn reverse_autodiff_demo() {
+    let mut tp = Tape::<f32, ScalarOps>::new();
+    let x = tp.create_node(2.0);
+    let cst = tp.create_node(5.0);
+    let xx = tp.mul(x, x);
+    let y  = tp.mul(cst, xx);
+    
     tp.reverse(y);
     println!("{}", tp);
+    println!("x: {}, dx: {}", tp[x].data, tp[x].grad);
+}
+
+fn forward_autodiff_demo() {
+    let f1 = |x: F<f32, f32>| F::cst(5.0) * x * x; // f(x) = 5x^2
+    println!("{:?}", f1(F::var(2.0))); // f'(x) = 10x
+}
+
+fn main() {
+    forward_autodiff_demo();
+    // reverse_autodiff_demo();
 }   

@@ -1,6 +1,4 @@
-use std::ops::{Index, IndexMut};
 use super::tape::{Idx, Tape, CompNode, Diff};
-use std::fmt;
 
 use ndarray::Array2;
 
@@ -14,20 +12,6 @@ pub enum VectorOps {
     ElemReLU(Idx),
     Dot(Idx, Idx),
     Cross(Idx, Idx)
-}
-
-impl Index<Idx> for Tape<Array2<f32>, VectorOps> {
-    type Output = CompNode<Array2<f32>, VectorOps>;
-
-    fn index(&self, index: Idx) -> &Self::Output {
-        &self.vals[index]
-    }
-}
-
-impl IndexMut<Idx> for Tape<Array2<f32>, VectorOps> {
-    fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
-        &mut self.vals[index]
-    }
 }
 
 impl CompNode<Array2<f32>, VectorOps> {
