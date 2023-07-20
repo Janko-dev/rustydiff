@@ -7,29 +7,55 @@ pub struct F<X, D> {
     pub dx: D
 }
 
-impl <X, D> F<X, D> {
-    pub fn new(x: X, dx: D) -> Self {
+pub type FX<X> = F<X, X>;
+
+impl <X> FX<X> {
+    pub fn new(x: X, dx: X) -> Self {
         F { x, dx }
     }
 }
 
-impl <X, D: Zero> F<X, D> {
+impl <X: Zero> FX<X> {
     pub fn cst(x: X) -> Self {
         F { 
             x, 
-            dx: D::zero()
+            dx: X::zero()
         }
     }
 }
 
-impl <X, D: One> F<X, D> {
+impl <X: One> FX<X> {
     pub fn var(x: X) -> Self {
         F { 
             x, 
-            dx: D::one()
+            dx: X::one()
         }
     }
 }
+
+// impl <X, D> F<X, D> {
+//     pub fn new(x: X, dx: D) -> Self {
+//         F { x, dx }
+//     }
+// }
+
+// impl <X, D: Zero> F<X, D> {
+//     pub fn cst(x: X) -> Self {
+//         F { 
+//             x, 
+//             dx: D::zero()
+//         }
+//     }
+// }
+
+// impl <X, D: One> F<X, D> {
+//     pub fn var(x: X) -> Self {
+//         F { 
+//             x, 
+//             dx: D::one()
+//         }
+//     }
+// }
 
 impl <X, D: Clone> F<X, D> {
     pub fn deriv(&mut self) -> D {
@@ -111,19 +137,3 @@ where
         }
     }
 }
-
-// impl<X, D> F<X, D> 
-// where
-//     X: Clone + Float,
-//     D: Clone + Float
-// {
-
-//     fn powf(self, n: Self) -> Self {
-//         F {
-//             x: self.x.clone().powf(n.x.clone()),
-//             dx: self.x
-//         }
-//     }
-// } 
-
-
