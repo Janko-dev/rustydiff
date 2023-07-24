@@ -1,5 +1,5 @@
 use std::ops::{Add, Mul, Sub, Div, Neg};
-use num_traits::{Float, FloatConst, NumCast, One, ToPrimitive, Zero};
+use num_traits::{One, Zero};
 
 #[derive(Debug, Clone, Copy)]
 pub struct F<X, D> {

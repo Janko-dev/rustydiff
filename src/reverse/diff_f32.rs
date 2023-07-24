@@ -1,4 +1,5 @@
-use super::tape::{Idx, Tape, CompNode, Diff, EmptyOp};
+use super::tape::{Idx, Tape, Diff, EmptyOp, Var};
+use std::ops::{*};
 use std::fmt;
 
 #[derive(Debug)]
@@ -18,125 +19,123 @@ impl EmptyOp for ScalarOps {
     }
 }
 
-impl Tape<f32, ScalarOps> {
-    pub fn new() -> Self {
-        Self { vals: vec![]}
-    }
+impl<'a> Add for Var<'a, f32, ScalarOps> {
+    type Output = Var<'a, f32, ScalarOps>;
 
-    pub fn create_node(&mut self, value: f32) -> Idx {
-        let mut node = CompNode::<f32, ScalarOps>::new(value);
-        node.idx = self.vals.len();
-        self.vals.push(node);
-        self.vals.len()-1
-    }
-
-    pub fn _reverse(&mut self, y: Idx) {
-        let y_node = &self[y];
-
-        match y_node.children {
-
-            ScalarOps::Add(a, b) => {
-                self[a].grad += self[y].grad * 1.0;
-                self[b].grad += self[y].grad * 1.0;
-
-                self._reverse(a);
-                self._reverse(b);
-            },
-            ScalarOps::Sub(a, b) => {
-                self[a].grad += self[y].grad * 1.0;
-                self[b].grad += self[y].grad * -1.0;
-
-                self._reverse(a);
-                self._reverse(b);
-            },
-            ScalarOps::Mul(a, b) => {
-                self[a].grad += self[y].grad * self[b].data;
-                self[b].grad += self[y].grad * self[a].data;
-
-                self._reverse(a);
-                self._reverse(b);
-            },
-            ScalarOps::Pow(a, b) => {
-                let l_data = self[a].data;
-                let r_data = self[b].data;
-                self[a].grad += self[y].grad * r_data * l_data.powf(r_data - 1.0);
-                self[b].grad += self[y].grad * l_data.log2() * l_data.powf(r_data);
-
-                self._reverse(a);
-                self._reverse(b);
-            },
-            ScalarOps::TanH(a) => {
-                self[a].grad += self[y].grad * (1.0 - self[y].grad*self[y].grad);
-
-                self._reverse(a);
-            }
-            ScalarOps::ReLU(a) => {
-                if self[y].data > 0.0 {
-                    self[a].grad += self[y].grad * 1.0;
-                }
-                self._reverse(a);
-            }
-            ScalarOps::Empty => {},
+    fn add(self, rhs: Self) -> Self::Output {
+        let res = self.data + rhs.data;
+        Var {
+            tape: self.tape,
+            data: res,
+            idx: self.tape.var_operator(res, ScalarOps::Add(self.idx, rhs.idx))
         }
-        
-
     }
-
-    pub fn add(&mut self, a: Idx, b: Idx) -> Idx {
-        let res = self.create_node(self[a].data + self[b].data);
-        self[res].children = ScalarOps::Add(a, b);
-        res
-    }
-
-    pub fn mul(&mut self, a: Idx, b: Idx) -> Idx {
-        let res = self.create_node(self[a].data * self[b].data);
-        self[res].children = ScalarOps::Mul(a, b);
-        res
-    }
-
-    pub fn sub(&mut self, a: Idx, b: Idx) -> Idx {
-        let res = self.create_node(self[a].data - self[b].data);
-        self[res].children = ScalarOps::Sub(a, b);
-        res
-    }
-
-    pub fn pow(&mut self, a: Idx, b: Idx) -> Idx {
-        let res = self.create_node(self[a].data.powf(self[b].data));
-        self[res].children = ScalarOps::Pow(a, b);
-        res
-    }
-
-    pub fn relu(&mut self, a: Idx) -> Idx {
-        let res = if self[a].data >= 0.0 {
-            self.create_node(self[a].data)
-        } else {
-            self.create_node(0.0)
-        };
-        self[res].children = ScalarOps::ReLU(a);
-        res
-    }
-
-    pub fn tanh(&mut self, a: Idx) -> Idx {
-        let res = self.create_node(self[a].data.tanh());
-        self[res].children = ScalarOps::ReLU(a);
-        res
-    }
-    
 }
 
-impl Diff for Tape<f32, ScalarOps> {
+impl<'a> Sub for Var<'a, f32, ScalarOps> {
+    type Output = Var<'a, f32, ScalarOps>;
 
-    fn reverse(&mut self, y: Idx) {
-        self[y].grad = 1.0;
-        self._reverse(y);
+    fn sub(self, rhs: Self) -> Self::Output {
+        let res = self.data - rhs.data;
+        Var {
+            tape: self.tape,
+            data: res,
+            idx: self.tape.var_operator(res, ScalarOps::Sub(self.idx, rhs.idx))
+        }
+    }
+}
+
+impl<'a> Mul for Var<'a, f32, ScalarOps> {
+    type Output = Var<'a, f32, ScalarOps>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let res = self.data * rhs.data;
+        Var {
+            tape: self.tape,
+            data: res,
+            idx: self.tape.var_operator(res, ScalarOps::Mul(self.idx, rhs.idx))
+        }
+    }
+}
+
+pub fn powf<'a>(x: Var<'a, f32, ScalarOps>, n: Var<'a, f32, ScalarOps>) -> Var<'a, f32, ScalarOps> {
+    let res = x.data.powf(n.data);
+    Var {
+        tape: x.tape,
+        data: res,
+        idx: x.tape.var_operator(res, ScalarOps::Pow(x.idx, n.idx))
+    }
+}
+
+pub fn tanh<'a>(x: Var<'a, f32, ScalarOps>) -> Var<'a, f32, ScalarOps> {
+    let res = x.data.tanh();
+    Var {
+        tape: x.tape,
+        data: res,
+        idx: x.tape.var_operator(res, ScalarOps::TanH(x.idx))
+    }
+}
+
+pub fn relu<'a>(x: Var<'a, f32, ScalarOps>) -> Var<'a, f32, ScalarOps> {
+    let res = if x.data >= 0.0 {
+        x.data
+    } else {
+        0.0
+    };
+    Var {
+        tape: x.tape,
+        data: res,
+        idx: x.tape.var_operator(res, ScalarOps::ReLU(x.idx))
+    }
+}
+
+impl<'a> Diff<'a, f32, ScalarOps> for Var<'a, f32, ScalarOps> {
+
+    fn reverse(&self) {
+        let mut nodes_ref = self.tape.nodes.borrow_mut();
+        nodes_ref[self.idx].grad = 1.0;
+        let len = nodes_ref.len();
+
+        for i in (0..len).rev() {
+            match nodes_ref[i].parents {
+                ScalarOps::Add(a, b) => {
+                    nodes_ref[a].grad += nodes_ref[i].grad * 1.0;
+                    nodes_ref[b].grad += nodes_ref[i].grad * 1.0;
+                },
+                ScalarOps::Sub(a, b) => {
+                    nodes_ref[a].grad += nodes_ref[i].grad * 1.0;
+                    nodes_ref[b].grad += nodes_ref[i].grad * -1.0;
+                },
+                ScalarOps::Mul(a, b) => {
+                    nodes_ref[a].grad += nodes_ref[i].grad * nodes_ref[b].data;
+                    nodes_ref[b].grad += nodes_ref[i].grad * nodes_ref[a].data;
+                },
+                ScalarOps::Pow(a, b) => {
+                    let data_a = nodes_ref[a].data;
+                    let data_b = nodes_ref[b].data;
+                    nodes_ref[a].grad += nodes_ref[i].grad * data_b * data_a.powf(data_b - 1.0);
+                    nodes_ref[b].grad += nodes_ref[i].grad * data_a.log2() * data_a.powf(data_b);
+                },
+                ScalarOps::TanH(a) => {
+                    let data_i = nodes_ref[i].data;
+                    nodes_ref[a].grad += nodes_ref[i].grad * (1.0 - data_i*data_i);
+                },
+                ScalarOps::ReLU(a) => {
+                    if nodes_ref[i].data > 0.0 {
+                        nodes_ref[a].grad += nodes_ref[i].grad * 1.0;
+                    }
+                }
+                ScalarOps::Empty => {}
+            }
+        }
     }
 }
 
 impl fmt::Display for Tape<f32, ScalarOps> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for node in self.vals.iter() {
-            write!(f, "idx: {}, data: {}, grad: {}", node.idx, node.data, node.grad)?;
-            match node.children {
+        for (i, node) in self.nodes.borrow().iter().enumerate() {
+            write!(f, "idx: {}, data: {}, grad: {}", i, node.data, node.grad)?;
+            match node.parents {
                 ScalarOps::Add(a, b) => {writeln!(f, " <-- add -- ({}, {})", a, b)?; },
                 ScalarOps::Sub(a, b) => {writeln!(f, " <-- sub -- ({}, {})", a, b)?; },
                 ScalarOps::Mul(a, b) => {writeln!(f, " <-- mul -- ({}, {})", a, b)?; },
