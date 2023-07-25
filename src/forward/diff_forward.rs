@@ -33,30 +33,6 @@ impl <X: One> FX<X> {
     }
 }
 
-// impl <X, D> F<X, D> {
-//     pub fn new(x: X, dx: D) -> Self {
-//         F { x, dx }
-//     }
-// }
-
-// impl <X, D: Zero> F<X, D> {
-//     pub fn cst(x: X) -> Self {
-//         F { 
-//             x, 
-//             dx: D::zero()
-//         }
-//     }
-// }
-
-// impl <X, D: One> F<X, D> {
-//     pub fn var(x: X) -> Self {
-//         F { 
-//             x, 
-//             dx: D::one()
-//         }
-//     }
-// }
-
 impl <X, D: Clone> F<X, D> {
     pub fn deriv(&mut self) -> D {
         self.dx.clone()
